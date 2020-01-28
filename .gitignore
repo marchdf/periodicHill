@@ -1,0 +1,8 @@
+.DS_Store
+naluX
+*.log
+*.o*
+__pycache__
+*.pdf
+restart
+results

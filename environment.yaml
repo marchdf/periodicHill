@@ -1,0 +1,15 @@
+# Configuring:
+# install miniconda
+# conda env create -f environment.yaml
+name: periodicHill
+channels: !!python/tuple
+  - defaults
+  - conda-forge
+dependencies:
+  - matplotlib
+  - numpy
+  - pandas
+  - pip
+  - scipy
+  - pip:
+      - -r requirements.txt
