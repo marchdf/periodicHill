@@ -8,12 +8,12 @@
 import argparse
 import os
 import glob
-import numpy as np
+import yaml
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.lines import Line2D
 import pandas as pd
-
+import utilities
 
 # ========================================================================
 #
@@ -83,18 +83,7 @@ def read_exp_data(fdir):
 def read_les_data(fdir):
     lst = []
     pfx = "UFR3-30_C_10595_data_MB-"
-    mapping = {
-        "001": 0.05,
-        "002": 0.5,
-        "003": 1.0,
-        "004": 2.0,
-        "005": 3.0,
-        "006": 4.0,
-        "007": 5.0,
-        "008": 6.0,
-        "009": 7.0,
-        "010": 8.0,
-    }
+    mapping = {f"{k+1:03d}": x for k, x in enumerate(utilities.xplanes())}
     for k, v in mapping.items():
         fname = os.path.join(fdir, pfx + k + ".dat")
 
@@ -112,57 +101,25 @@ def read_les_data(fdir):
 
 
 # ========================================================================
-def hill(x):
-    h = 28.0
-    xstar = x * h
-    xstar[xstar > 128] = 252 - xstar[xstar > 128]
-    ystar = np.zeros(x.shape)
-    idx = (0.0 <= xstar) & (xstar < 9.0)
-    ystar[idx] = np.minimum(
-        28 * np.ones(x[idx].shape),
-        2.800000000000e01
-        + 0.000000000000e00 * xstar[idx]
-        + 6.775070969851e-03 * xstar[idx] ** 2
-        - 2.124527775800e-03 * xstar[idx] ** 3,
-    )
-    idx = (9.0 <= xstar) & (xstar < 14.0)
-    ystar[idx] = (
-        2.507355893131e01
-        + 9.754803562315e-01 * xstar[idx]
-        - 1.016116352781e-01 * xstar[idx] ** 2
-        + 1.889794677828e-03 * xstar[idx] ** 3
-    )
-    idx = (14.0 <= xstar) & (xstar < 20.0)
-    ystar[idx] = (
-        2.579601052357e01
-        + 8.206693007457e-01 * xstar[idx]
-        - 9.055370274339e-02 * xstar[idx] ** 2
-        + 1.626510569859e-03 * xstar[idx] ** 3
-    )
-    idx = (20.0 <= xstar) & (xstar < 30.0)
-    ystar[idx] = (
-        4.046435022819e01
-        - 1.379581654948e00 * xstar[idx]
-        + 1.945884504128e-02 * xstar[idx] ** 2
-        - 2.070318932190e-04 * xstar[idx] ** 3
-    )
-    idx = (30.0 <= xstar) & (xstar < 40.0)
-    ystar[idx] = (
-        1.792461334664e01
-        + 8.743920332081e-01 * xstar[idx]
-        - 5.567361123058e-02 * xstar[idx] ** 2
-        + 6.277731764683e-04 * xstar[idx] ** 3
-    )
-    idx = (40.0 <= xstar) & (xstar < 50.0)
-    ystar[idx] = np.maximum(
-        np.zeros(x[idx].shape),
-        5.639011190988e01
-        - 2.010520359035e00 * xstar[idx]
-        + 1.644919857549e-02 * xstar[idx] ** 2
-        + 2.674976141766e-05 * xstar[idx] ** 3,
-    )
+def parse_ic(fname):
+    """Parse the Nalu yaml input file for the initial conditions"""
+    with open(fname, "r") as stream:
+        try:
+            dat = yaml.load(stream)
+            u0 = float(
+                dat["realms"][0]["initial_conditions"][0]["value"]["velocity"][0]
+            )
+            rho0 = float(
+                dat["realms"][0]["material_properties"]["specifications"][0]["value"]
+            )
+            mu = float(
+                dat["realms"][0]["material_properties"]["specifications"][1]["value"]
+            )
 
-    return ystar / h
+            return u0, rho0, mu
+
+        except yaml.YAMLError as exc:
+            print(exc)
 
 
 # ========================================================================
@@ -188,7 +145,7 @@ if __name__ == "__main__":
     grouped = edf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
 
-        idx = group.y.values >= hill(group.x.values)
+        idx = group.y.values >= utilities.hill(group.x.values)
         plt.figure("u", figsize=figsize)
         p = plt.plot(
             group[idx].u + group[idx].x,
@@ -216,7 +173,7 @@ if __name__ == "__main__":
     grouped = ldf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
 
-        idx = group.y.values >= hill(group.x.values)
+        idx = group.y.values >= utilities.hill(group.x.values)
         plt.figure("u")
         p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[0])
 
@@ -228,6 +185,26 @@ if __name__ == "__main__":
     )
     plt.figure("cf")
     plt.plot(cf.x, cf.cf, lw=2, color=cmap[0], label="LES")
+
+    # Nalu data
+    yname = os.path.join(os.path.dirname(args.fdir), "periodicHill.yaml")
+    u0, rho0, mu = parse_ic(yname)
+    dynPres = rho0 * 0.5 * u0 * u0
+    ndf = pd.read_csv(os.path.join(args.fdir, "profiles.dat"))
+    grouped = ndf.groupby(["x"])
+    for k, (name, group) in enumerate(grouped):
+
+        idx = group.y.values >= utilities.hill(group.x.values)
+        plt.figure("u")
+        p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[1])
+
+        plt.figure("v")
+        p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[1])
+
+    cf = pd.read_csv(os.path.join(args.fdir, "tw.dat"))
+    cf["cf"] = cf.tauw
+    plt.figure("cf")
+    plt.plot(cf.x, cf.cf, lw=2, color=cmap[1], label="Nalu")
 
     # Save the plots
     fname = "plots.pdf"
@@ -244,6 +221,7 @@ if __name__ == "__main__":
             label="Exp.",
         ),
         Line2D([0], [0], lw=2, color=cmap[0], label="LES"),
+        Line2D([0], [0], lw=2, color=cmap[1], label="Nalu"),
     ]
 
     with PdfPages(fname) as pdf:
