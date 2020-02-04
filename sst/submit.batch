@@ -3,7 +3,7 @@
 #SBATCH --job-name=periodicHill
 #SBATCH --account=hfm
 #SBATCH --nodes=2
-#SBATCH --time=4:00:00
+#SBATCH --time=48:00:00
 #SBATCH -o %x.o%j
 
 module purge
@@ -23,6 +23,5 @@ echo "Num. MPI Ranks = $mpi_ranks"
 echo "Num. threads   = $OMP_NUM_THREADS"
 echo "Working dir    = $PWD"
 
-#sbcast -f ${nalu_exec} $(pwd)/naluX
 cp ${nalu_exec} $(pwd)/naluX
-srun -n ${mpi_ranks} -c 1 --cpu_bind=cores $(pwd)/naluX -i periodicHill.yaml -o periodicHill.o
+srun -n ${mpi_ranks} -c 1 --cpu_bind=cores $(pwd)/naluX -i periodicHill.yaml -o periodicHill.log
