@@ -207,14 +207,12 @@ if __name__ == "__main__":
     # CDP v2f
     grouped = v2fdf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
-        print(group)
         plt.figure("u")
         p = plt.plot(group.u, group.y, lw=2, color=cmap[2])
 
     # CDP TAMS
     grouped = tamsdf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
-        print(group)
         plt.figure("u")
         p = plt.plot(group.u, group.y, lw=2, color=cmap[3])
 
