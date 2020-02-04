@@ -1,6 +1,18 @@
 import numpy as np
 
 
+# ========================================================================
+def p0_printer(par):
+    iproc = par.rank
+
+    def printer(*args, **kwargs):
+        if iproc == 0:
+            print(*args, **kwargs)
+
+    return printer
+
+
+# ========================================================================
 def hill(x):
     h = 28.0
     xstar = x * h
@@ -54,5 +66,6 @@ def hill(x):
     return ystar / h
 
 
+# ========================================================================
 def xplanes():
     return [0.05, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]

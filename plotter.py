@@ -206,6 +206,16 @@ if __name__ == "__main__":
     plt.figure("cf")
     plt.plot(cf.x, cf.cf, lw=2, color=cmap[1], label="Nalu")
 
+    inlet = pd.read_csv(os.path.join(args.fdir, "inlet.dat"))
+    plt.figure("u_inlet")
+    plt.plot(inlet.t, inlet.u, lw=2, color=cmap[1], label="Nalu")
+
+    plt.figure("tke_inlet")
+    plt.plot(inlet.t, inlet.tke, lw=2, color=cmap[1], label="Nalu")
+
+    plt.figure("sdr_inlet")
+    plt.plot(inlet.t, inlet.sdr, lw=2, color=cmap[1], label="Nalu")
+
     # Save the plots
     fname = "plots.pdf"
     legend_elements = [
@@ -253,6 +263,36 @@ if __name__ == "__main__":
         ax = plt.gca()
         plt.xlabel(r"$x$", fontsize=22, fontweight="bold")
         plt.ylabel(r"$c_f$", fontsize=22, fontweight="bold")
+        plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+        plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+        legend = ax.legend(loc="best")
+        plt.tight_layout()
+        pdf.savefig(dpi=300)
+
+        plt.figure("u_inlet")
+        ax = plt.gca()
+        plt.xlabel(r"$t$", fontsize=22, fontweight="bold")
+        plt.ylabel(r"$u$", fontsize=22, fontweight="bold")
+        plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+        plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+        legend = ax.legend(loc="best")
+        plt.tight_layout()
+        pdf.savefig(dpi=300)
+
+        plt.figure("tke_inlet")
+        ax = plt.gca()
+        plt.xlabel(r"$t$", fontsize=22, fontweight="bold")
+        plt.ylabel(r"$k$", fontsize=22, fontweight="bold")
+        plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+        plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+        legend = ax.legend(loc="best")
+        plt.tight_layout()
+        pdf.savefig(dpi=300)
+
+        plt.figure("sdr_inlet")
+        ax = plt.gca()
+        plt.xlabel(r"$t$", fontsize=22, fontweight="bold")
+        plt.ylabel(r"$\omega$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
         plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
         legend = ax.legend(loc="best")
