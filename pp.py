@@ -102,9 +102,8 @@ if __name__ == "__main__":
     for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
         xyz = coords.bkt_view(bkt)
         tw = tauw.bkt_view(bkt)
-        for i in range(bkt.size):
-            data[cnt, :] = [xyz[i, 0], xyz[i, 1], xyz[i, 2], tw[i]]
-            cnt += 1
+        data[cnt : cnt + bkt.size, :] = np.hstack((xyz, tw.reshape(-1, 1)))
+        cnt += bkt.size
 
     lst = comm.gather(data, root=0)
     comm.Barrier()
@@ -126,9 +125,8 @@ if __name__ == "__main__":
     for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
         xyz = coords.bkt_view(bkt)
         vel = velocity.bkt_view(bkt)
-        for i in range(bkt.size):
-            data[cnt, :] = np.hstack((xyz[i, :], vel[i, :]))
-            cnt += 1
+        data[cnt : cnt + bkt.size, :] = np.hstack((xyz, vel))
+        cnt += bkt.size
 
     # Subset the velocities on planes
     xplanes = utilities.xplanes()

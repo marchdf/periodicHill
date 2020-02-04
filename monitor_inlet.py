@@ -75,7 +75,7 @@ if __name__ == "__main__":
     tsteps = mesh.stkio.time_steps
     printer(f"""Num. time steps = {num_time_steps}\nMax. time step  = {max_time}""")
 
-    inlet = pd.DataFrame(
+    idf = pd.DataFrame(
         {
             "t": tsteps,
             "u": np.zeros(len(tsteps)),
@@ -105,9 +105,10 @@ if __name__ == "__main__":
             vel = velocity.bkt_view(bkt)
             tke = turbke.bkt_view(bkt)
             sdr = specdr.bkt_view(bkt)
-            for i in range(bkt.size):
-                data[cnt, :] = np.hstack((xyz[i, :], vel[i, :], tke[i], sdr[i]))
-                cnt += 1
+            data[cnt : cnt + bkt.size, :] = np.hstack(
+                (xyz, vel, tke.reshape(-1, 1), sdr.reshape(-1, 1))
+            )
+            cnt += bkt.size
 
         lst = comm.gather(data, root=0)
         comm.Barrier()
@@ -115,9 +116,9 @@ if __name__ == "__main__":
             df = pd.DataFrame(np.vstack(lst), columns=names)
             means = df.groupby("y", as_index=False).mean().sort_values(by=["y"])
             Ly = df.y.max() - df.y.min()
-            inlet.iloc[k].u = np.trapz(means.u, means.y) / Ly
-            inlet.iloc[k].tke = np.trapz(means.tke, means.y) / Ly
-            inlet.iloc[k].sdr = np.trapz(means.sdr, means.y) / Ly
+            idf.iloc[k].u = np.trapz(means.u, means.y) / Ly
+            idf.iloc[k].tke = np.trapz(means.tke, means.y) / Ly
+            idf.iloc[k].sdr = np.trapz(means.sdr, means.y) / Ly
 
     if rank == 0:
-        inlet.to_csv(os.path.join(fdir, "inlet.dat"), index=False)
+        idf.to_csv(os.path.join(fdir, "inlet.dat"), index=False)
