@@ -25,6 +25,7 @@ linear_solvers:
     bamg_coarsen_type: 8
     bamg_interp_type: 6
     bamg_cycle_type: 1
+    absolute_tolerance: 1.0e-8
 
 realms:
 
@@ -68,7 +69,7 @@ realms:
           pressure: 0
           velocity: [1.0,0.0,0.0]
           turbulent_ke: 0.1
-          specific_dissipation_rate: 1000.0
+          specific_dissipation_rate: 50.0
 
     material_properties:
       target_name: interior-hex
@@ -110,6 +111,13 @@ realms:
       name: myOptions
       turbulence_model: sst
       projected_timescale_type: momentum_diag_inv
+
+      fix_pressure_at_node:
+       value: 0.0
+       node_lookup_type: spatial_location
+       location: [ 0.0, 1.0, 0.0 ]
+       search_target_part: [interior-HEX]
+       search_method: stk_kdtree
 
       options:
         - hybrid_factor:
@@ -188,7 +196,7 @@ Time_Integrators:
       name: ti_1
       start_time: 0
       time_step: 4.0e-2
-      termination_step_count: 20000
+      termination_step_count: 4500
       time_stepping_type: fixed
       time_step_count: 0
       second_order_accuracy: yes

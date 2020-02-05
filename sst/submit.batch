@@ -3,7 +3,7 @@
 #SBATCH --job-name=periodicHill
 #SBATCH --account=hfm
 #SBATCH --nodes=2
-#SBATCH --time=48:00:00
+#SBATCH --time=4:00:00
 #SBATCH -o %x.o%j
 
 module purge
