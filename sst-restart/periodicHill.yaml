@@ -30,10 +30,9 @@ linear_solvers:
 realms:
 
   - name: realm_1
-    mesh: ../meshes/periodicHill.exo
+    mesh: ../sst-har/restart-r10/periodicHill.rst
     use_edges: yes
     check_for_missing_bcs: yes
-    automatic_decomposition_type: rcb
 
     equation_systems:
       name: theEqSys
@@ -116,7 +115,7 @@ realms:
        value: 0.0
        node_lookup_type: spatial_location
        location: [ 0.0, 1.0, 0.0 ]
-       search_target_part: [interior-HEX]
+       search_target_part: [interior-hex]
        search_method: stk_kdtree
 
       options:
@@ -158,7 +157,7 @@ realms:
             momentum: body_force_box
 
         - source_term_parameters:
-            momentum: [0.0095, 0.0, 0.0]
+            momentum: [0.011, 0.0, 0.0]
             momentum_box: [-1.0, 1.00001, 0.0, 10.0, 4.0, 5.0]
 
     post_processing:
@@ -173,6 +172,7 @@ realms:
     restart:
       restart_data_base_name: restart/periodicHill.rst
       restart_frequency: 500
+      restart_time: 10000
 
     output:
       output_data_base_name: results/periodicHill.e
@@ -196,7 +196,7 @@ Time_Integrators:
       name: ti_1
       start_time: 0
       time_step: 4.0e-2
-      termination_step_count: 4500
+      termination_step_count: 100000
       time_stepping_type: fixed
       time_step_count: 0
       second_order_accuracy: yes

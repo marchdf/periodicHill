@@ -15,7 +15,7 @@ export OMP_NUM_THREADS=1  # Max hardware threads = 4
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 
-nalu_exec=$HOME/exawind/source/nalu-wind/build/naluX
+nalu_exec=$HOME/exawind/source/nalu-wind/build-tams-update/naluX
 
 echo "Job name       = $SLURM_JOB_NAME"
 echo "Num. nodes     = $SLURM_JOB_NUM_NODES"

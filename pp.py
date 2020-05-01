@@ -59,9 +59,32 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser(description="A simple post-processing tool")
     parser.add_argument(
-        "-m", "--mfile", help="Root name of files to postprocess", required=True
+        "-m",
+        "--mfile",
+        help="Root name of files to postprocess",
+        required=True,
+        type=str,
     )
     parser.add_argument("--auto_decomp", help="Auto-decomposition", action="store_true")
+    parser.add_argument(
+        "-v",
+        "--vel_name",
+        help="Name of the velocity field",
+        default="velocity",
+        type=str,
+    )
+    parser.add_argument(
+        "-navg", help="Number of times to average", default=10, type=int
+    )
+    parser.add_argument(
+        "--flowthrough", help="Flowthrough time (L/u)", default=9.0, type=float
+    )
+    parser.add_argument(
+        "--factor",
+        help="Factor of flowthrough time between time steps used in average",
+        type=float,
+        default=1.2,
+    )
     args = parser.parse_args()
 
     fdir = os.path.dirname(args.mfile)
@@ -83,29 +106,44 @@ if __name__ == "__main__":
 
     num_time_steps = mesh.stkio.num_time_steps
     max_time = mesh.stkio.max_time
-    tsteps = mesh.stkio.time_steps
+    tsteps = np.array(mesh.stkio.time_steps)
     printer(f"""Num. time steps = {num_time_steps}\nMax. time step  = {max_time}""")
-    ftime, missing = mesh.stkio.read_defined_input_fields(tsteps[-1])
-    printer(f"Loaded fields for time: {ftime}")
 
-    coords = mesh.meta.coordinate_field
+    # Figure out the times over which to average
+    tmp_tavg = np.sort(
+        tsteps[-1] - args.flowthrough * args.factor * np.arange(args.navg)
+    )
+    dist = np.abs(np.array(tsteps)[:, np.newaxis] - tmp_tavg)
+    idx = dist.argmin(axis=0)
+    tavg = tsteps[idx]
+    tavg_instantaneous = tsteps[idx[0] :]
 
-    # Extract spanwise average tau_wall on wall
-    wall = mesh.meta.get_part("wall")
-    sel = wall & mesh.meta.locally_owned_part
-    tauw = mesh.meta.get_field("tau_wall")
-    names = ["x", "y", "z", "tauw"]
-    nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
+    # Extract time and spanwise average tau_wall on wall
+    tw_data = None
+    for tstep in tavg_instantaneous:
+        ftime, missing = mesh.stkio.read_defined_input_fields(tstep)
+        printer(f"Loading tau_wall fields for time: {ftime}")
 
-    cnt = 0
-    data = np.zeros((nnodes, len(names)))
-    for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
-        xyz = coords.bkt_view(bkt)
-        tw = tauw.bkt_view(bkt)
-        data[cnt : cnt + bkt.size, :] = np.hstack((xyz, tw.reshape(-1, 1)))
-        cnt += bkt.size
+        coords = mesh.meta.coordinate_field
+        wall = mesh.meta.get_part("wall")
+        sel = wall & mesh.meta.locally_owned_part
+        tauw = mesh.meta.get_field("tau_wall")
+        names = ["x", "y", "z", "tauw"]
+        nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
 
-    lst = comm.gather(data, root=0)
+        cnt = 0
+        data = np.zeros((nnodes, len(names)))
+        for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
+            xyz = coords.bkt_view(bkt)
+            tw = tauw.bkt_view(bkt)
+            data[cnt : cnt + bkt.size, :] = np.hstack((xyz, tw.reshape(-1, 1)))
+            cnt += bkt.size
+
+        if tw_data is None:
+            tw_data = np.zeros(data.shape)
+        tw_data += data / len(tavg_instantaneous)
+
+    lst = comm.gather(tw_data, root=0)
     comm.Barrier()
     if rank == 0:
         df = pd.DataFrame(np.vstack(lst), columns=names)
@@ -113,30 +151,38 @@ if __name__ == "__main__":
         twname = os.path.join(fdir, "tw.dat")
         tw.to_csv(twname, index=False)
 
-    # Extract velocity data
-    interior = mesh.meta.get_part("interior-HEX")
-    sel = interior & mesh.meta.locally_owned_part
-    velocity = mesh.meta.get_field("velocity")
-    names = ["x", "y", "z", "u", "v", "w"]
-    nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
+    # Extract (average) velocity data
+    vel_data = None
+    for tstep in tavg:
+        ftime, missing = mesh.stkio.read_defined_input_fields(tstep)
+        printer(f"Loading {args.vel_name} fields for time: {ftime}")
 
-    cnt = 0
-    data = np.zeros((nnodes, len(names)))
-    for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
-        xyz = coords.bkt_view(bkt)
-        vel = velocity.bkt_view(bkt)
-        data[cnt : cnt + bkt.size, :] = np.hstack((xyz, vel))
-        cnt += bkt.size
+        interior = mesh.meta.get_part("interior-hex")
+        sel = interior & mesh.meta.locally_owned_part
+        velocity = mesh.meta.get_field(args.vel_name)
+        names = ["x", "y", "z", "u", "v", "w"]
+        nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
+
+        cnt = 0
+        data = np.zeros((nnodes, len(names)))
+        for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
+            xyz = coords.bkt_view(bkt)
+            vel = velocity.bkt_view(bkt)
+            data[cnt : cnt + bkt.size, :] = np.hstack((xyz, vel))
+            cnt += bkt.size
+
+        if vel_data is None:
+            vel_data = np.zeros(data.shape)
+        vel_data += data / len(tavg)
 
     # Subset the velocities on planes
-    xplanes = utilities.xplanes()
     ninterp = 200
     dx = 0.05 * 4
     planes = []
-    for x in xplanes:
+    for x in utilities.xplanes():
 
         # subset the data around the plane of interest
-        sub = data[(x - dx <= data[:, 0]) & (data[:, 0] <= x + dx), :]
+        sub = vel_data[(x - dx <= vel_data[:, 0]) & (vel_data[:, 0] <= x + dx), :]
 
         lst = comm.gather(sub, root=0)
         comm.Barrier()
@@ -157,7 +203,7 @@ if __name__ == "__main__":
             #     (xi[None, None, :], yi[None, :, None], zi[:, None, None]),
             #     method="linear",
             # )
-            # but saves the weights for reuse
+            # but saves the wts for reuse
             vtx, wts = interp_weights(df[["x", "y", "z"]].values, xis)
             ui = interpolate(df.u.values, vtx, wts).reshape(-1, ninterp)
             vi = interpolate(df.v.values, vtx, wts).reshape(-1, ninterp)

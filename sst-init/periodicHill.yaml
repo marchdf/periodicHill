@@ -110,13 +110,13 @@ realms:
     solution_options:
       name: myOptions
       turbulence_model: sst
-      projected_timescale_type: momentum_diag_inv
+      # projected_timescale_type: momentum_diag_inv
 
       fix_pressure_at_node:
        value: 0.0
        node_lookup_type: spatial_location
        location: [ 0.0, 1.0, 0.0 ]
-       search_target_part: [interior-HEX]
+       search_target_part: [interior-hex]
        search_method: stk_kdtree
 
       options:
@@ -145,11 +145,11 @@ realms:
             specific_dissipation_rate: element
             ndtw: element
 
-        - relaxation_factor:
-            velocity: 0.7
-            pressure: 0.3
-            turbulent_ke: 0.7
-            specific_dissipation_rate: 0.7
+        # - relaxation_factor:
+        #     velocity: 0.7
+        #     pressure: 0.3
+        #     turbulent_ke: 0.7
+        #     specific_dissipation_rate: 0.7
 
         - turbulence_model_constants:
             SDRWallFactor: 0.625
@@ -195,8 +195,8 @@ Time_Integrators:
   - StandardTimeIntegrator:
       name: ti_1
       start_time: 0
-      time_step: 4.0e-2
-      termination_step_count: 4500
+      time_step: 1.0e-3
+      termination_step_count: 100000
       time_stepping_type: fixed
       time_step_count: 0
       second_order_accuracy: yes

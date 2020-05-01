@@ -223,7 +223,7 @@ if __name__ == "__main__":
     tau = h / u0
     dynPres = rho0 * 0.5 * u0 * u0
     ndf = pd.read_csv(os.path.join(args.fdir, "profiles.dat"))
-    ndf.loc[ndf.u > 1e1, ["u", "v", "w"]] = 0.0
+    ndf.loc[ndf.u > 5, ["u", "v", "w"]] = 0.0
     grouped = ndf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
         idx = group.y.values >= utilities.hill(group.x.values)
@@ -265,7 +265,7 @@ if __name__ == "__main__":
         Line2D([0], [0], lw=2, color=cmap[1], label="LES"),
         Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),
         Line2D([0], [0], lw=2, color=cmap[3], label="CDP-TAMS"),
-        Line2D([0], [0], lw=2, color=cmap[0], label="Nalu-SST"),
+        Line2D([0], [0], lw=2, color=cmap[0], label="Nalu-TAMS"),
     ]
 
     with PdfPages(fname) as pdf:
