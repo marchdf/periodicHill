@@ -117,6 +117,8 @@ if __name__ == "__main__":
     idx = dist.argmin(axis=0)
     tavg = tsteps[idx]
     tavg_instantaneous = tsteps[idx[0] :]
+    printer("Averaging the following steps:")
+    printer(tavg)
 
     # Extract time and spanwise average tau_wall on wall
     tw_data = None

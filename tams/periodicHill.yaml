@@ -30,9 +30,10 @@ linear_solvers:
 realms:
 
   - name: realm_1
-    mesh: ../sst-init/restart-r10/periodicHill.rst
+    mesh: ../sst/restart/periodicHill.rst
     use_edges: yes
     check_for_missing_bcs: yes
+    support_inconsistent_multi_state_restart: yes
 
     equation_systems:
       name: theEqSys
@@ -69,6 +70,11 @@ realms:
           velocity: [1.0,0.0,0.0]
           turbulent_ke: 0.1
           specific_dissipation_rate: 50.0
+          average_velocity: [1.0,0.0,0.0]
+          average_tke_resolved: 0.0
+          average_dudx: 0.0
+          k_ratio: 1.0
+          avg_res_adequacy_parameter: 1.0 
 
     material_properties:
       target_name: interior-hex
@@ -108,7 +114,7 @@ realms:
 
     solution_options:
       name: myOptions
-      turbulence_model: sst
+      turbulence_model: sst_tams
       projected_timescale_type: momentum_diag_inv
 
       fix_pressure_at_node:
@@ -152,6 +158,11 @@ realms:
 
         - turbulence_model_constants:
             SDRWallFactor: 0.625
+            periodicForcingLengthX: 4.5
+            periodicForcingLengthY: 1.0
+            periodicForcingLengthZ: 2.25
+            forcingCl: 8.0
+            forcingFactor: 8.0
 
         - source_terms:
             momentum: body_force_box
@@ -180,6 +191,7 @@ realms:
       output_node_set: no
       output_variables:
        - velocity
+       - average_velocity
        - density
        - pressure
        - pressure_force
@@ -190,13 +202,23 @@ realms:
        - minimum_distance_to_wall
        - sst_f_one_blending
        - turbulent_viscosity
+       - k_ratio
+       - average_time
+       - average_mass_flow_rate
+       - average_tke_resolved
+       - avg_res_adequacy_parameter
+       - resolution_adequacy_parameter
+       - metric_tensor
+       - element_courant
+       - average_production
+       - average_dudx
 
 Time_Integrators:
   - StandardTimeIntegrator:
       name: ti_1
       start_time: 0
-      time_step: 4.0e-2
-      termination_step_count: 100000
+      time_step: 4.0e-3
+      termination_step_count: 1000000
       time_stepping_type: fixed
       time_step_count: 0
       second_order_accuracy: yes
