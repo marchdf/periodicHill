@@ -236,7 +236,7 @@ if __name__ == "__main__":
         p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[0])
 
     cf = pd.read_csv(os.path.join(args.fdir, "tw.dat"))
-    cf["cf"] = cf.tauw
+    cf["cf"] = cf.tauw / dynPres
     plt.figure("cf")
     plt.plot(cf.x, cf.cf, lw=2, color=cmap[0], label="Nalu")
 
