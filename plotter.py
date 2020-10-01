@@ -129,8 +129,9 @@ def parse_ic(fname):
             mu = float(
                 dat["realms"][0]["material_properties"]["specifications"][1]["value"]
             )
+            turb_model = dat["realms"][0]["solution_options"]["turbulence_model"]
 
-            return u0, rho0, mu
+            return u0, rho0, mu, turb_model
 
         except yaml.YAMLError as exc:
             print(exc)
@@ -218,7 +219,8 @@ if __name__ == "__main__":
 
     # Nalu data
     yname = os.path.join(os.path.dirname(args.fdir), "periodicHill.yaml")
-    u0, rho0, mu = parse_ic(yname)
+    u0, rho0, mu, turb_model = parse_ic(yname)
+    nalu_label = "Nalu-SST" if turb_model == "sst" else "Nalu-TAMS"
     h = 1.0
     tau = h / u0
     dynPres = rho0 * 0.5 * u0 * u0
@@ -265,7 +267,7 @@ if __name__ == "__main__":
         Line2D([0], [0], lw=2, color=cmap[1], label="LES"),
         Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),
         Line2D([0], [0], lw=2, color=cmap[3], label="CDP-TAMS"),
-        Line2D([0], [0], lw=2, color=cmap[0], label="Nalu-TAMS"),
+        Line2D([0], [0], lw=2, color=cmap[0], label=nalu_label),
     ]
 
     with PdfPages(fname) as pdf:

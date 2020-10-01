@@ -11,6 +11,7 @@ import pandas as pd
 from mpi4py import MPI
 import stk
 import utilities
+from scipy.interpolate import griddata
 
 
 # ========================================================================
@@ -190,30 +191,45 @@ if __name__ == "__main__":
         comm.Barrier()
         if rank == 0:
             xi = np.array([x])
-            df = pd.DataFrame(np.vstack(lst), columns=names).sort_values(
-                by=["x", "y", "z"]
+            df = (
+                pd.DataFrame(np.vstack(lst), columns=names)
+                .groupby(["x", "y"], as_index=False)
+                .mean()
+                .sort_values(by=["x", "y"])
             )
             ymin, ymax = utilities.hill(xi)[0], df.y.max()
             yi = np.linspace(ymin, ymax, ninterp)
-            zi = np.unique(df.z)
-            xis = np.array(np.meshgrid(xi, yi, zi)).T.reshape(-1, 3)
 
-            # Equivalent to:
-            # ui = spi.griddata(
-            #     (df.x, df.y, df.z),
-            #     df.u,
-            #     (xi[None, None, :], yi[None, :, None], zi[:, None, None]),
-            #     method="linear",
-            # )
-            # but saves the wts for reuse
-            vtx, wts = interp_weights(df[["x", "y", "z"]].values, xis)
-            ui = interpolate(df.u.values, vtx, wts).reshape(-1, ninterp)
-            vi = interpolate(df.v.values, vtx, wts).reshape(-1, ninterp)
-            wi = interpolate(df.w.values, vtx, wts).reshape(-1, ninterp)
+            umean = griddata(
+                (df.x, df.y), df.u, (xi[None, :], yi[:, None]), method="cubic"
+            ).flatten()
+            vmean = griddata(
+                (df.x, df.y), df.v, (xi[None, :], yi[:, None]), method="cubic"
+            ).flatten()
+            wmean = griddata(
+                (df.x, df.y), df.w, (xi[None, :], yi[:, None]), method="cubic"
+            ).flatten()
 
-            umean = np.mean(ui, axis=0).flatten()
-            vmean = np.mean(vi, axis=0).flatten()
-            wmean = np.mean(wi, axis=0).flatten()
+            # Old way:
+            # zi = np.unique(df.z)
+            # xis = np.array(np.meshgrid(xi, yi, zi)).T.reshape(-1, 3)
+
+            # # Equivalent to:
+            # # ui = spi.griddata(
+            # #     (df.x, df.y, df.z),
+            # #     df.u,
+            # #     (xi[None, None, :], yi[None, :, None], zi[:, None, None]),
+            # #     method="linear",
+            # # )
+            # # but saves the wts for reuse
+            # vtx, wts = interp_weights(df[["x", "y", "z"]].values, xis)
+            # ui = interpolate(df.u.values, vtx, wts).reshape(-1, ninterp)
+            # vi = interpolate(df.v.values, vtx, wts).reshape(-1, ninterp)
+            # wi = interpolate(df.w.values, vtx, wts).reshape(-1, ninterp)
+            # umean = np.mean(ui, axis=0).flatten()
+            # vmean = np.mean(vi, axis=0).flatten()
+            # wmean = np.mean(wi, axis=0).flatten()
+
             planes.append(
                 pd.DataFrame(
                     {
