@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="A simple plot tool")
-    parser.add_argument("-f", "--fdir", help="Folder to plot", required=True)
+    parser.add_argument("-f", "--fdir", nargs="+", help="Folder to plot", required=True)
     args = parser.parse_args()
 
     # Reference data
@@ -159,7 +159,24 @@ if __name__ == "__main__":
     tamsdf = read_cdp_data(os.path.join(refdir, "cdp-tams"))
     figsize = (15, 6)
 
+    # plot stuff
+    fname = "plots.pdf"
+    legend_elements = []
+
     # Exp.
+    legend_elements += [
+        Line2D(
+            [0],
+            [0],
+            lw=0,
+            marker=markertype[2],
+            color=cmap[-1],
+            mfc=cmap[-1],
+            mec=cmap[-1],
+            markersize=3,
+            label="Exp.",
+        ),
+    ]
     grouped = edf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
 
@@ -188,88 +205,78 @@ if __name__ == "__main__":
             ms=3,
         )
 
-    # LES
-    grouped = ldf.groupby(["x"])
-    for k, (name, group) in enumerate(grouped):
+    # # LES
+    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[1], label="LES"),)
+    # grouped = ldf.groupby(["x"])
+    # for k, (name, group) in enumerate(grouped):
 
-        idx = group.y.values >= utilities.hill(group.x.values)
-        plt.figure("u")
-        p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[1])
+    #     idx = group.y.values >= utilities.hill(group.x.values)
+    #     plt.figure("u")
+    #     p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[1])
 
-        plt.figure("v")
-        p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[1])
+    #     plt.figure("v")
+    #     p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[1])
 
-    cf = pd.read_csv(
-        os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
-    )
-    plt.figure("cf")
-    plt.plot(cf.x, cf.cf, lw=2, color=cmap[1], label="LES")
+    # cf = pd.read_csv(
+    #     os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
+    # )
+    # plt.figure("cf")
+    # plt.plot(cf.x, cf.cf, lw=2, color=cmap[1], label="LES")
 
-    # CDP v2f
-    grouped = v2fdf.groupby(["x"])
-    for k, (name, group) in enumerate(grouped):
-        plt.figure("u")
-        p = plt.plot(group.u, group.y, lw=2, color=cmap[2])
+    # # CDP v2f
+    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),)
+    # grouped = v2fdf.groupby(["x"])
+    # for k, (name, group) in enumerate(grouped):
+    #     plt.figure("u")
+    #     p = plt.plot(group.u, group.y, lw=2, color=cmap[2])
 
-    # CDP TAMS
-    grouped = tamsdf.groupby(["x"])
-    for k, (name, group) in enumerate(grouped):
-        plt.figure("u")
-        p = plt.plot(group.u, group.y, lw=2, color=cmap[3])
+    # # CDP TAMS
+    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[3], label="CDP-v2f-TAMS"),)
+    # grouped = tamsdf.groupby(["x"])
+    # for k, (name, group) in enumerate(grouped):
+    #     plt.figure("u")
+    #     p = plt.plot(group.u, group.y, lw=2, color=cmap[3])
 
     # Nalu data
-    yname = os.path.join(os.path.dirname(args.fdir), "periodicHill.yaml")
-    u0, rho0, mu, turb_model = parse_ic(yname)
-    nalu_label = "Nalu-SST" if turb_model == "sst" else "Nalu-TAMS"
-    h = 1.0
-    tau = h / u0
-    dynPres = rho0 * 0.5 * u0 * u0
-    ndf = pd.read_csv(os.path.join(args.fdir, "profiles.dat"))
-    ndf.loc[ndf.u > 5, ["u", "v", "w"]] = 0.0
-    grouped = ndf.groupby(["x"])
-    for k, (name, group) in enumerate(grouped):
-        idx = group.y.values >= utilities.hill(group.x.values)
-        plt.figure("u")
-        p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[0])
+    for i, fdir in enumerate(args.fdir):
 
-        plt.figure("v")
-        p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[0])
+        yname = os.path.join(os.path.dirname(fdir), "periodicHill.yaml")
+        u0, rho0, mu, turb_model = parse_ic(yname)
+        model = turb_model.upper().replace("_", "-")
+        legend_elements += [
+            Line2D([0], [0], lw=2, color=cmap[i], label=f"Nalu-{model}")
+        ]
 
-    cf = pd.read_csv(os.path.join(args.fdir, "tw.dat"))
-    cf["cf"] = cf.tauw / dynPres
-    plt.figure("cf")
-    plt.plot(cf.x, cf.cf, lw=2, color=cmap[0], label="Nalu")
+        h = 1.0
+        tau = h / u0
+        dynPres = rho0 * 0.5 * u0 * u0
+        ndf = pd.read_csv(os.path.join(fdir, "profiles.dat"))
+        ndf.loc[ndf.u > 5, ["u", "v", "w"]] = 0.0
+        grouped = ndf.groupby(["x"])
+        for k, (name, group) in enumerate(grouped):
+            idx = group.y.values >= utilities.hill(group.x.values)
+            plt.figure("u")
+            p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[i])
 
-    inlet = pd.read_csv(os.path.join(args.fdir, "inlet.dat"))
-    plt.figure("u_inlet")
-    plt.plot(inlet.t / tau, inlet.u, lw=2, color=cmap[0], label="Nalu")
+            plt.figure("v")
+            p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[i])
 
-    plt.figure("tke_inlet")
-    plt.plot(inlet.t / tau, inlet.tke, lw=2, color=cmap[0], label="Nalu")
+        cf = pd.read_csv(os.path.join(fdir, "tw.dat"))
+        cf["cf"] = cf.tauw / dynPres
+        plt.figure("cf")
+        plt.plot(cf.x, cf.cf, lw=2, color=cmap[i], label=f"Nalu-{model}")
 
-    plt.figure("sdr_inlet")
-    plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[0], label="Nalu")
+        inlet = pd.read_csv(os.path.join(fdir, "inlet.dat"))
+        plt.figure("u_inlet")
+        plt.plot(inlet.t / tau, inlet.u, lw=2, color=cmap[i], label=f"Nalu-{model}")
+
+        plt.figure("tke_inlet")
+        plt.plot(inlet.t / tau, inlet.tke, lw=2, color=cmap[i], label=f"Nalu-{model}")
+
+        plt.figure("sdr_inlet")
+        plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[i], label=f"Nalu-{model}")
 
     # Save the plots
-    fname = "plots.pdf"
-    legend_elements = [
-        Line2D(
-            [0],
-            [0],
-            lw=0,
-            marker=markertype[2],
-            color=cmap[-1],
-            mfc=cmap[-1],
-            mec=cmap[-1],
-            markersize=3,
-            label="Exp.",
-        ),
-        Line2D([0], [0], lw=2, color=cmap[1], label="LES"),
-        Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),
-        Line2D([0], [0], lw=2, color=cmap[3], label="CDP-TAMS"),
-        Line2D([0], [0], lw=2, color=cmap[0], label=nalu_label),
-    ]
-
     with PdfPages(fname) as pdf:
         plt.figure("u")
         ax = plt.gca()
@@ -285,7 +292,7 @@ if __name__ == "__main__":
 
         plt.figure("v")
         ax = plt.gca()
-        plt.xlabel(r"$\langle u_x \rangle + x$", fontsize=22, fontweight="bold")
+        plt.xlabel(r"$\langle u_y \rangle + x$", fontsize=22, fontweight="bold")
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
         plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
