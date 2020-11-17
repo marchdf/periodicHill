@@ -13,7 +13,10 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.lines import Line2D
 import pandas as pd
+import numpy as np
 import utilities
+from scipy.interpolate import griddata
+
 
 # ========================================================================
 #
@@ -158,6 +161,7 @@ if __name__ == "__main__":
     v2fdf = read_cdp_data(os.path.join(refdir, "cdp-v2f"))
     tamsdf = read_cdp_data(os.path.join(refdir, "cdp-tams"))
     figsize = (15, 6)
+    vscale = 4.0
 
     # plot stuff
     fname = "plots.pdf"
@@ -195,7 +199,7 @@ if __name__ == "__main__":
 
         plt.figure("v", figsize=figsize)
         p = plt.plot(
-            group[idx].v + group[idx].x,
+            vscale * group[idx].v + group[idx].x,
             group[idx].y,
             lw=0,
             color=cmap[-1],
@@ -206,22 +210,22 @@ if __name__ == "__main__":
         )
 
     # # LES
-    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[1], label="LES"),)
+    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[-2], label="LES"),)
     # grouped = ldf.groupby(["x"])
     # for k, (name, group) in enumerate(grouped):
 
     #     idx = group.y.values >= utilities.hill(group.x.values)
     #     plt.figure("u")
-    #     p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[1])
+    #     p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
 
     #     plt.figure("v")
-    #     p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[1])
+    #     p = plt.plot(vscale*group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
 
     # cf = pd.read_csv(
     #     os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
     # )
     # plt.figure("cf")
-    # plt.plot(cf.x, cf.cf, lw=2, color=cmap[1], label="LES")
+    # plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES")
 
     # # CDP v2f
     # legend_elements += (Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),)
@@ -259,10 +263,12 @@ if __name__ == "__main__":
             p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[i])
 
             plt.figure("v")
-            p = plt.plot(group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[i])
+            p = plt.plot(
+                vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[i]
+            )
 
         cf = pd.read_csv(os.path.join(fdir, "tw.dat"))
-        cf["cf"] = cf.tauw / dynPres
+        cf["cf"] = cf.tauwx / dynPres
         plt.figure("cf")
         plt.plot(cf.x, cf.cf, lw=2, color=cmap[i], label=f"Nalu-{model}")
 
@@ -276,10 +282,26 @@ if __name__ == "__main__":
         plt.figure("sdr_inlet")
         plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[i], label=f"Nalu-{model}")
 
+        front = pd.read_csv(os.path.join(fdir, "f_front.dat"))
+        xmin, xmax = front.x.min(), front.x.max()
+        ymin, ymax = front.y.min(), front.y.max()
+        nx = 1000
+        ny = int(nx / (ymax - ymin))
+        xg, yg = np.meshgrid(np.linspace(xmin, xmax, nx), np.linspace(ymin, ymax, ny))
+        plt.figure(f"u_front-{model}", figsize=figsize)
+        ug = griddata((front.x, front.y), front.u, (xg, yg), method="linear")
+        plt.imshow(ug, origin="lower", extent=[xmin, xmax, ymin, ymax])
+
     # Save the plots
     with PdfPages(fname) as pdf:
+        x_hill = np.linspace(0, 9, 100)
+        y_hill = utilities.hill(x_hill)
+
         plt.figure("u")
         ax = plt.gca()
+        plt.fill_between(
+            x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
+        )
         plt.xlabel(r"$\langle u_x \rangle + x$", fontsize=22, fontweight="bold")
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
@@ -292,7 +314,12 @@ if __name__ == "__main__":
 
         plt.figure("v")
         ax = plt.gca()
-        plt.xlabel(r"$\langle u_y \rangle + x$", fontsize=22, fontweight="bold")
+        plt.fill_between(
+            x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
+        )
+        plt.xlabel(
+            f"${vscale}\langle u_y \\rangle + x$", fontsize=22, fontweight="bold"
+        )
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
         plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
@@ -341,3 +368,18 @@ if __name__ == "__main__":
         legend = ax.legend(loc="best")
         plt.tight_layout()
         pdf.savefig(dpi=300)
+
+        for i in plt.get_figlabels():
+            if "u_front" in i:
+                plt.figure(i)
+                ax = plt.gca()
+                plt.fill_between(
+                    x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=20
+                )
+                plt.colorbar()
+                plt.xlabel(r"$x / h$", fontsize=22, fontweight="bold")
+                plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
+                plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+                plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+                plt.tight_layout()
+                pdf.savefig(dpi=300)

@@ -46,11 +46,14 @@ def interpolate(values, vtx, wts):
 if __name__ == "__main__":
 
     # Parse arguments
-    parser = argparse.ArgumentParser(description="An inlet monitoring tool")
+    parser = argparse.ArgumentParser(
+        description="An post-processing tool for a sideset"
+    )
     parser.add_argument(
         "-m", "--mfile", help="Root name of files to postprocess", required=True
     )
     parser.add_argument("--auto_decomp", help="Auto-decomposition", action="store_true")
+    parser.add_argument("-p", "--part", help="Part to post-process", required=True)
     args = parser.parse_args()
 
     fdir = os.path.dirname(args.mfile)
@@ -89,9 +92,9 @@ if __name__ == "__main__":
 
         coords = mesh.meta.coordinate_field
 
-        # Extract velocity at the inlet
-        inlet = mesh.meta.get_part("inlet")
-        sel = inlet & mesh.meta.locally_owned_part
+        # Extract fields at the parts
+        m_part = mesh.meta.get_part(args.part)
+        sel = m_part & mesh.meta.locally_owned_part
         velocity = mesh.meta.get_field("velocity")
         turbke = mesh.meta.get_field("turbulent_ke")
         specdr = mesh.meta.get_field("specific_dissipation_rate")
@@ -114,6 +117,8 @@ if __name__ == "__main__":
         comm.Barrier()
         if rank == 0:
             df = pd.DataFrame(np.vstack(lst), columns=names)
+            if tstep == tsteps[-1]:
+                df.to_csv(os.path.join(fdir, f"f_{args.part}.dat"), index=False)
             means = df.groupby("y", as_index=False).mean().sort_values(by=["y"])
             Ly = df.y.max() - df.y.min()
             idf.iloc[k].u = np.trapz(means.u, means.y) / Ly
@@ -121,4 +126,4 @@ if __name__ == "__main__":
             idf.iloc[k].sdr = np.trapz(means.sdr, means.y) / Ly
 
     if rank == 0:
-        idf.to_csv(os.path.join(fdir, "inlet.dat"), index=False)
+        idf.to_csv(os.path.join(fdir, f"{args.part}.dat"), index=False)

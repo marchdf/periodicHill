@@ -75,7 +75,7 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument(
-        "-navg", help="Number of times to average", default=10, type=int
+        "--navg", help="Number of times to average", default=10, type=int
     )
     parser.add_argument(
         "--flowthrough", help="Flowthrough time (L/u)", default=9.0, type=float
@@ -111,11 +111,14 @@ if __name__ == "__main__":
     printer(f"""Num. time steps = {num_time_steps}\nMax. time step  = {max_time}""")
 
     # Figure out the times over which to average
-    tmp_tavg = np.sort(
-        tsteps[-1] - args.flowthrough * args.factor * np.arange(args.navg)
-    )
-    dist = np.abs(np.array(tsteps)[:, np.newaxis] - tmp_tavg)
-    idx = dist.argmin(axis=0)
+    if args.factor > 0:
+        tmp_tavg = np.sort(
+            tsteps[-1] - args.flowthrough * args.factor * np.arange(args.navg)
+        )
+        dist = np.abs(np.array(tsteps)[:, np.newaxis] - tmp_tavg)
+        idx = dist.argmin(axis=0)
+    else:
+        idx = np.arange(len(tsteps) - args.navg, len(tsteps))
     tavg = tsteps[idx]
     tavg_instantaneous = tsteps[idx[0] :]
     printer("Averaging the following steps:")
@@ -131,7 +134,8 @@ if __name__ == "__main__":
         wall = mesh.meta.get_part("wall")
         sel = wall & mesh.meta.locally_owned_part
         tauw = mesh.meta.get_field("tau_wall")
-        names = ["x", "y", "z", "tauw"]
+        tauwv = mesh.meta.get_field("tau_wall_vector")
+        names = ["x", "y", "z", "tauw", "tauwx", "tauwy", "tauwz"]
         nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
 
         cnt = 0
@@ -139,7 +143,8 @@ if __name__ == "__main__":
         for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
             xyz = coords.bkt_view(bkt)
             tw = tauw.bkt_view(bkt)
-            data[cnt : cnt + bkt.size, :] = np.hstack((xyz, tw.reshape(-1, 1)))
+            twv = tauwv.bkt_view(bkt)
+            data[cnt : cnt + bkt.size, :] = np.hstack((xyz, tw.reshape(-1, 1), twv))
             cnt += bkt.size
 
         if tw_data is None:
