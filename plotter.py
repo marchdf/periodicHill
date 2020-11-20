@@ -162,6 +162,7 @@ if __name__ == "__main__":
     tamsdf = read_cdp_data(os.path.join(refdir, "cdp-tams"))
     figsize = (15, 6)
     vscale = 4.0
+    vpscale = 10.0
 
     # plot stuff
     fname = "plots.pdf"
@@ -209,6 +210,42 @@ if __name__ == "__main__":
             ms=3,
         )
 
+        plt.figure("upup", figsize=figsize)
+        p = plt.plot(
+            vpscale * group[idx].upup + group[idx].x,
+            group[idx].y,
+            lw=0,
+            color=cmap[-1],
+            marker=markertype[2],
+            mec=cmap[-1],
+            mfc=cmap[-1],
+            ms=3,
+        )
+
+        plt.figure("vpvp", figsize=figsize)
+        p = plt.plot(
+            vpscale * group[idx].vpvp + group[idx].x,
+            group[idx].y,
+            lw=0,
+            color=cmap[-1],
+            marker=markertype[2],
+            mec=cmap[-1],
+            mfc=cmap[-1],
+            ms=3,
+        )
+
+        plt.figure("upvp", figsize=figsize)
+        p = plt.plot(
+            vpscale * group[idx].upvp + group[idx].x,
+            group[idx].y,
+            lw=0,
+            color=cmap[-1],
+            marker=markertype[2],
+            mec=cmap[-1],
+            mfc=cmap[-1],
+            ms=3,
+        )
+
     # LES
     legend_elements += (Line2D([0], [0], lw=2, color=cmap[-2], label="LES"),)
     # grouped = ldf.groupby(["x"])
@@ -219,6 +256,19 @@ if __name__ == "__main__":
     #     p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
 
     #     plt.figure("v")
+    #     p = plt.plot(
+    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+    #     )
+
+    #     plt.figure("v")
+    #     p = plt.plot(
+    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+    #     )
+    #     plt.figure("v")
+    #     p = plt.plot(
+    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+    #     )
+    #     plt.figure("u")
     #     p = plt.plot(
     #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
     #     )
@@ -267,6 +317,30 @@ if __name__ == "__main__":
             plt.figure("v")
             p = plt.plot(
                 vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[i]
+            )
+
+            plt.figure("upup")
+            p = plt.plot(
+                vpscale * group[idx].upup + group[idx].x,
+                group[idx].y,
+                lw=2,
+                color=cmap[i],
+            )
+
+            plt.figure("vpvp")
+            p = plt.plot(
+                vpscale * group[idx].vpvp + group[idx].x,
+                group[idx].y,
+                lw=2,
+                color=cmap[i],
+            )
+
+            plt.figure("upvp")
+            p = plt.plot(
+                vpscale * group[idx].upvp + group[idx].x,
+                group[idx].y,
+                lw=2,
+                color=cmap[i],
             )
 
         cf = pd.read_csv(os.path.join(fdir, "tw.dat"))
@@ -337,6 +411,57 @@ if __name__ == "__main__":
         )
         plt.xlabel(
             f"${vscale}\langle u_y \\rangle + x$", fontsize=22, fontweight="bold"
+        )
+        plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
+        plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+        plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+        plt.xlim([-0.5, 9.5])
+        plt.ylim([0, 3.5])
+        legend = ax.legend(handles=legend_elements, loc="best")
+        plt.tight_layout()
+        pdf.savefig(dpi=300)
+
+        plt.figure("upup")
+        ax = plt.gca()
+        plt.fill_between(
+            x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
+        )
+        plt.xlabel(
+            f"${vpscale}\langle u'u' \\rangle + x$", fontsize=22, fontweight="bold"
+        )
+        plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
+        plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+        plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+        plt.xlim([-0.5, 9.5])
+        plt.ylim([0, 3.5])
+        legend = ax.legend(handles=legend_elements, loc="best")
+        plt.tight_layout()
+        pdf.savefig(dpi=300)
+
+        plt.figure("vpvp")
+        ax = plt.gca()
+        plt.fill_between(
+            x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
+        )
+        plt.xlabel(
+            f"${vpscale}\langle v'v' \\rangle + x$", fontsize=22, fontweight="bold"
+        )
+        plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
+        plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
+        plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
+        plt.xlim([-0.5, 9.5])
+        plt.ylim([0, 3.5])
+        legend = ax.legend(handles=legend_elements, loc="best")
+        plt.tight_layout()
+        pdf.savefig(dpi=300)
+
+        plt.figure("upvp")
+        ax = plt.gca()
+        plt.fill_between(
+            x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
+        )
+        plt.xlabel(
+            f"${vpscale}\langle u'v' \\rangle + x$", fontsize=22, fontweight="bold"
         )
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")

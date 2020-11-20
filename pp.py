@@ -206,34 +206,26 @@ if __name__ == "__main__":
             yi = np.linspace(ymin, ymax, ninterp)
 
             umean = griddata(
-                (df.x, df.y), df.u, (xi[None, :], yi[:, None]), method="cubic"
+                (df.x, df.y),
+                df.u,
+                (xi[None, :], yi[:, None]),
+                method="cubic",
+                fill_value=0,
             ).flatten()
             vmean = griddata(
-                (df.x, df.y), df.v, (xi[None, :], yi[:, None]), method="cubic"
+                (df.x, df.y),
+                df.v,
+                (xi[None, :], yi[:, None]),
+                method="cubic",
+                fill_value=0,
             ).flatten()
             wmean = griddata(
-                (df.x, df.y), df.w, (xi[None, :], yi[:, None]), method="cubic"
+                (df.x, df.y),
+                df.w,
+                (xi[None, :], yi[:, None]),
+                method="cubic",
+                fill_value=0,
             ).flatten()
-
-            # Old way:
-            # zi = np.unique(df.z)
-            # xis = np.array(np.meshgrid(xi, yi, zi)).T.reshape(-1, 3)
-
-            # # Equivalent to:
-            # # ui = spi.griddata(
-            # #     (df.x, df.y, df.z),
-            # #     df.u,
-            # #     (xi[None, None, :], yi[None, :, None], zi[:, None, None]),
-            # #     method="linear",
-            # # )
-            # # but saves the wts for reuse
-            # vtx, wts = interp_weights(df[["x", "y", "z"]].values, xis)
-            # ui = interpolate(df.u.values, vtx, wts).reshape(-1, ninterp)
-            # vi = interpolate(df.v.values, vtx, wts).reshape(-1, ninterp)
-            # wi = interpolate(df.w.values, vtx, wts).reshape(-1, ninterp)
-            # umean = np.mean(ui, axis=0).flatten()
-            # vmean = np.mean(vi, axis=0).flatten()
-            # wmean = np.mean(wi, axis=0).flatten()
 
             planes.append(
                 pd.DataFrame(
@@ -247,6 +239,71 @@ if __name__ == "__main__":
                 )
             )
 
+    # Extract fluctuating velocities
     if rank == 0:
-        df = pd.concat(planes)
-        df.to_csv(os.path.join(fdir, "profiles.dat"), index=False)
+        for plane in planes:
+            plane["upup"] = np.zeros(plane.u.shape)
+            plane["vpvp"] = np.zeros(plane.u.shape)
+            plane["upvp"] = np.zeros(plane.u.shape)
+
+    for tstep in tavg_instantaneous:
+        ftime, missing = mesh.stkio.read_defined_input_fields(tstep)
+        printer(f"Loading {args.vel_name} fields for time: {ftime}")
+
+        interior = mesh.meta.get_part("interior-hex")
+        sel = interior & mesh.meta.locally_owned_part
+        velocity = mesh.meta.get_field(args.vel_name)
+        names = ["x", "y", "z", "u", "v", "w"]
+        nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
+
+        cnt = 0
+        data = np.zeros((nnodes, len(names)))
+        for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
+            xyz = coords.bkt_view(bkt)
+            vel = velocity.bkt_view(bkt)
+            data[cnt : cnt + bkt.size, :] = np.hstack((xyz, vel))
+            cnt += bkt.size
+
+        # subset the data around the plane of interest
+        for k, x in enumerate(utilities.xplanes()):
+            sub = vel_data[(x - dx <= vel_data[:, 0]) & (vel_data[:, 0] <= x + dx), :]
+
+            lst = comm.gather(sub, root=0)
+            comm.Barrier()
+            if rank == 0:
+                xi = np.array([x])
+                ymin, ymax = utilities.hill(xi)[0], df.y.max()
+                yi = np.linspace(ymin, ymax, ninterp)
+                df = pd.DataFrame(np.vstack(lst), columns=names)
+
+                grouped = df.groupby("z")
+                navg = len(tavg_instantaneous) * grouped.ngroups
+                for name, group in grouped:
+                    up = (
+                        griddata(
+                            (group.x, group.y),
+                            group.u,
+                            (xi[None, :], yi[:, None]),
+                            method="cubic",
+                            fill_value=0,
+                        ).flatten()
+                        - planes[k].u
+                    )
+                    vp = (
+                        griddata(
+                            (group.x, group.y),
+                            group.v,
+                            (xi[None, :], yi[:, None]),
+                            method="cubic",
+                            fill_value=0,
+                        ).flatten()
+                        - planes[k].v
+                    )
+
+                    planes[k].upup += up * up / navg
+                    planes[k].vpvp += vp * vp / navg
+                    planes[k].upvp += up * vp / navg
+
+        if rank == 0:
+            df = pd.concat(planes)
+            df.to_csv(os.path.join(fdir, "profiles.dat"), index=False)
