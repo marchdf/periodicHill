@@ -95,22 +95,31 @@ if __name__ == "__main__":
         # Extract fields at the parts
         m_part = mesh.meta.get_part(args.part)
         sel = m_part & mesh.meta.locally_owned_part
-        velocity = mesh.meta.get_field("velocity")
-        turbke = mesh.meta.get_field("turbulent_ke")
-        specdr = mesh.meta.get_field("specific_dissipation_rate")
+        fields = [
+            mesh.meta.get_field("velocity"),
+            mesh.meta.get_field("turbulent_ke"),
+            mesh.meta.get_field("specific_dissipation_rate"),
+        ]
         names = ["x", "y", "z", "u", "v", "w", "tke", "sdr"]
-        nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
+
+        optional_fields = {"beta": "k_ratio", "rk": "avg_res_adequacy_parameter"}
+        for key, value in optional_fields.items():
+            fld = mesh.meta.get_field(value)
+            if not fld.is_null:
+                fields.append(fld)
+                names.append(key)
 
         cnt = 0
+        nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
         data = np.zeros((nnodes, len(names)))
         for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
-            xyz = coords.bkt_view(bkt)
-            vel = velocity.bkt_view(bkt)
-            tke = turbke.bkt_view(bkt)
-            sdr = specdr.bkt_view(bkt)
-            data[cnt : cnt + bkt.size, :] = np.hstack(
-                (xyz, vel, tke.reshape(-1, 1), sdr.reshape(-1, 1))
-            )
+            arr = coords.bkt_view(bkt)
+            for fld in fields:
+                vals = fld.bkt_view(bkt)
+                if len(vals.shape) == 1:  # its a scalar
+                    vals = vals.reshape(-1, 1)
+                arr = np.hstack((arr, vals))
+            data[cnt : cnt + bkt.size, :] = arr
             cnt += bkt.size
 
         lst = comm.gather(data, root=0)

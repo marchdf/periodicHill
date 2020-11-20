@@ -209,8 +209,8 @@ if __name__ == "__main__":
             ms=3,
         )
 
-    # # LES
-    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[-2], label="LES"),)
+    # LES
+    legend_elements += (Line2D([0], [0], lw=2, color=cmap[-2], label="LES"),)
     # grouped = ldf.groupby(["x"])
     # for k, (name, group) in enumerate(grouped):
 
@@ -219,13 +219,15 @@ if __name__ == "__main__":
     #     p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
 
     #     plt.figure("v")
-    #     p = plt.plot(vscale*group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
+    #     p = plt.plot(
+    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+    #     )
 
-    # cf = pd.read_csv(
-    #     os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
-    # )
-    # plt.figure("cf")
-    # plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES")
+    cf = pd.read_csv(
+        os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
+    )
+    plt.figure("cf")
+    plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES")
 
     # # CDP v2f
     # legend_elements += (Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),)
@@ -288,9 +290,25 @@ if __name__ == "__main__":
         nx = 1000
         ny = int(nx / (ymax - ymin))
         xg, yg = np.meshgrid(np.linspace(xmin, xmax, nx), np.linspace(ymin, ymax, ny))
-        plt.figure(f"u_front-{model}", figsize=figsize)
-        ug = griddata((front.x, front.y), front.u, (xg, yg), method="linear")
-        plt.imshow(ug, origin="lower", extent=[xmin, xmax, ymin, ymax])
+
+        fields = {
+            "u": {"vmin": -0.2, "vmax": 1.3},
+            "beta": {"vmin": 0.0, "vmax": 1},
+            "rk": {"vmin": 0.5, "vmax": 7},
+        }
+        for name, opt in fields.items():
+            if name in front.columns:
+                plt.figure(f"{name}-front-{model}", figsize=figsize)
+                dat = griddata(
+                    (front.x, front.y), front[name], (xg, yg), method="linear"
+                )
+                plt.imshow(
+                    dat,
+                    origin="lower",
+                    extent=[xmin, xmax, ymin, ymax],
+                    vmin=opt["vmin"],
+                    vmax=opt["vmax"],
+                )
 
     # Save the plots
     with PdfPages(fname) as pdf:
@@ -370,7 +388,7 @@ if __name__ == "__main__":
         pdf.savefig(dpi=300)
 
         for i in plt.get_figlabels():
-            if "u_front" in i:
+            if "-front-" in i:
                 plt.figure(i)
                 ax = plt.gca()
                 plt.fill_between(
