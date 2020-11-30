@@ -266,7 +266,7 @@ if __name__ == "__main__":
 
         # subset the data around the plane of interest
         for k, x in enumerate(utilities.xplanes()):
-            sub = vel_data[(x - dx <= vel_data[:, 0]) & (vel_data[:, 0] <= x + dx), :]
+            sub = data[(x - dx <= data[:, 0]) & (data[:, 0] <= x + dx), :]
 
             lst = comm.gather(sub, root=0)
             comm.Barrier()

@@ -24,5 +24,6 @@ echo "Num. MPI Ranks = $mpi_ranks"
 echo "Num. threads   = $OMP_NUM_THREADS"
 echo "Working dir    = $PWD"
 
-cp ${nalu_exec} $(pwd)/naluX
-srun -n ${mpi_ranks} -c 1 --cpu_bind=cores $(pwd)/naluX -i periodicHill.yaml -o periodicHill.log
+#cp ${nalu_exec} $(pwd)/naluX
+#srun -n ${mpi_ranks} -c 1 --cpu_bind=cores $(pwd)/naluX -i periodicHill.yaml -o periodicHill.log
+srun -n ${mpi_ranks} -c 1 --cpu_bind=cores $(pwd)/naluX -i periodicHill-rst.yaml -o periodicHill-r01.log

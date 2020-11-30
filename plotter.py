@@ -248,30 +248,30 @@ if __name__ == "__main__":
 
     # LES
     legend_elements += (Line2D([0], [0], lw=2, color=cmap[-2], label="LES"),)
-    # grouped = ldf.groupby(["x"])
-    # for k, (name, group) in enumerate(grouped):
+    grouped = ldf.groupby(["x"])
+    for k, (name, group) in enumerate(grouped):
 
-    #     idx = group.y.values >= utilities.hill(group.x.values)
-    #     plt.figure("u")
-    #     p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
+        idx = group.y.values >= utilities.hill(group.x.values)
+        plt.figure("u")
+        p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
 
-    #     plt.figure("v")
-    #     p = plt.plot(
-    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
-    #     )
+        plt.figure("v")
+        p = plt.plot(
+            vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+        )
 
-    #     plt.figure("v")
-    #     p = plt.plot(
-    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
-    #     )
-    #     plt.figure("v")
-    #     p = plt.plot(
-    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
-    #     )
-    #     plt.figure("u")
-    #     p = plt.plot(
-    #         vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
-    #     )
+        plt.figure("upup")
+        p = plt.plot(
+            vpscale * group[idx].upup + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+        )
+        plt.figure("vpvp")
+        p = plt.plot(
+            vpscale * group[idx].vpvp + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+        )
+        plt.figure("upvp")
+        p = plt.plot(
+            vpscale * group[idx].upvp + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
+        )
 
     cf = pd.read_csv(
         os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
@@ -319,6 +319,8 @@ if __name__ == "__main__":
                 vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[i]
             )
 
+            if model == "SST":
+                continue
             plt.figure("upup")
             p = plt.plot(
                 vpscale * group[idx].upup + group[idx].x,
