@@ -10,6 +10,5 @@ is 1 m. The fluid density is set to :math:`1 \unitfrac{kg}{m^3}`. The
 fluid bulk velocity is :math:`1 \unitfrac{m}{s}`. The viscosity is
 therefore :math:`\nicefrac{1}{10600}`. The boundary conditions are
 periodic in the streamwise and the spanwise directions. The bottom and
-top boundary conditions are walls. A fixed forcing is applied at
-:math:`\nicefrac{y}{h} > 1` to ensure a unity bulk velocity at
-:math:`\nicefrac{x}{h} = 0`.
+top boundary conditions are walls. A fixed forcing is applied in the
+domain to ensure a unity bulk velocity at :math:`\nicefrac{x}{h} = 0`.

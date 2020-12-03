@@ -159,7 +159,7 @@ if __name__ == "__main__":
     edf = read_exp_data(edir)
     ldf = read_les_data(ldir)
     v2fdf = read_cdp_data(os.path.join(refdir, "cdp-v2f"))
-    tamsdf = read_cdp_data(os.path.join(refdir, "cdp-tams"))
+    amsdf = read_cdp_data(os.path.join(refdir, "cdp-ams"))
     figsize = (15, 6)
     vscale = 4.0
     vpscale = 10.0
@@ -288,9 +288,9 @@ if __name__ == "__main__":
     #     plt.figure("u")
     #     p = plt.plot(group.u, group.y, lw=2, color=cmap[2])
 
-    # # CDP TAMS
-    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[3], label="CDP-v2f-TAMS"),)
-    # grouped = tamsdf.groupby(["x"])
+    # # CDP AMS
+    # legend_elements += (Line2D([0], [0], lw=2, color=cmap[3], label="CDP-v2f-AMS"),)
+    # grouped = amsdf.groupby(["x"])
     # for k, (name, group) in enumerate(grouped):
     #     plt.figure("u")
     #     p = plt.plot(group.u, group.y, lw=2, color=cmap[3])
