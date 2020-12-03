@@ -279,7 +279,7 @@ if __name__ == "__main__":
         os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
     )
     plt.figure("cf")
-    plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES")
+    plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES (Breuer 2009)")
 
     # # CDP v2f
     # legend_elements += (Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),)
@@ -348,17 +348,17 @@ if __name__ == "__main__":
         cf = pd.read_csv(os.path.join(fdir, "tw.dat"))
         cf["cf"] = cf.tauwx / dynPres
         plt.figure("cf")
-        plt.plot(cf.x, cf.cf, lw=2, color=cmap[i], label=f"Nalu-{model}")
+        plt.plot(cf.x, cf.cf, lw=2, color=cmap[i], label=f"{model}")
 
         inlet = pd.read_csv(os.path.join(fdir, "inlet.dat"))
         plt.figure("u_inlet")
-        plt.plot(inlet.t / tau, inlet.u, lw=2, color=cmap[i], label=f"Nalu-{model}")
+        plt.plot(inlet.t / tau, inlet.u, lw=2, color=cmap[i], label=f"{model}")
 
         plt.figure("tke_inlet")
-        plt.plot(inlet.t / tau, inlet.tke, lw=2, color=cmap[i], label=f"Nalu-{model}")
+        plt.plot(inlet.t / tau, inlet.tke, lw=2, color=cmap[i], label=f"{model}")
 
         plt.figure("sdr_inlet")
-        plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[i], label=f"Nalu-{model}")
+        plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[i], label=f"{model}")
 
         front = pd.read_csv(os.path.join(fdir, "f_front.dat"))
         xmin, xmax = front.x.min(), front.x.max()
