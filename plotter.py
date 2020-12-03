@@ -256,30 +256,38 @@ if __name__ == "__main__":
         idx = group.y.values >= utilities.hill(group.x.values)
         plt.figure("u")
         p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[-2])
+        p[0].set_dashes(dashseq[-1])
 
         plt.figure("v")
         p = plt.plot(
             vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
         )
+        p[0].set_dashes(dashseq[-1])
 
         plt.figure("upup")
         p = plt.plot(
             vpscale * group[idx].upup + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
         )
+        p[0].set_dashes(dashseq[-1])
+
         plt.figure("vpvp")
         p = plt.plot(
             vpscale * group[idx].vpvp + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
         )
+        p[0].set_dashes(dashseq[-1])
+
         plt.figure("upvp")
         p = plt.plot(
             vpscale * group[idx].upvp + group[idx].x, group[idx].y, lw=2, color=cmap[-2]
         )
+        p[0].set_dashes(dashseq[-1])
 
     cf = pd.read_csv(
         os.path.join(ldir, "hill_LES_cf_digitized.dat"), delim_whitespace=True
     )
     plt.figure("cf")
-    plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES (Breuer 2009)")
+    p = plt.plot(cf.x, cf.cf, lw=2, color=cmap[-2], label="LES (Breuer 2009)")
+    p[0].set_dashes(dashseq[-1])
 
     # # CDP v2f
     # legend_elements += (Line2D([0], [0], lw=2, color=cmap[2], label="CDP-v2f"),)
@@ -313,11 +321,13 @@ if __name__ == "__main__":
             idx = group.y.values >= utilities.hill(group.x.values)
             plt.figure("u")
             p = plt.plot(group[idx].u + group[idx].x, group[idx].y, lw=2, color=cmap[i])
+            p[0].set_dashes(dashseq[i])
 
             plt.figure("v")
             p = plt.plot(
                 vscale * group[idx].v + group[idx].x, group[idx].y, lw=2, color=cmap[i]
             )
+            p[0].set_dashes(dashseq[i])
 
             if model == "SST":
                 continue
@@ -328,6 +338,7 @@ if __name__ == "__main__":
                 lw=2,
                 color=cmap[i],
             )
+            p[0].set_dashes(dashseq[i])
 
             plt.figure("vpvp")
             p = plt.plot(
@@ -336,6 +347,7 @@ if __name__ == "__main__":
                 lw=2,
                 color=cmap[i],
             )
+            p[0].set_dashes(dashseq[i])
 
             plt.figure("upvp")
             p = plt.plot(
@@ -344,21 +356,26 @@ if __name__ == "__main__":
                 lw=2,
                 color=cmap[i],
             )
+            p[0].set_dashes(dashseq[i])
 
         cf = pd.read_csv(os.path.join(fdir, "tw.dat"))
         cf["cf"] = cf.tauwx / dynPres
         plt.figure("cf")
-        plt.plot(cf.x, cf.cf, lw=2, color=cmap[i], label=f"{model}")
+        p = plt.plot(cf.x, cf.cf, lw=2, color=cmap[i], label=f"{model}")
+        p[0].set_dashes(dashseq[i])
 
         inlet = pd.read_csv(os.path.join(fdir, "inlet.dat"))
         plt.figure("u_inlet")
-        plt.plot(inlet.t / tau, inlet.u, lw=2, color=cmap[i], label=f"{model}")
+        p = plt.plot(inlet.t / tau, inlet.u, lw=2, color=cmap[i], label=f"{model}")
+        p[0].set_dashes(dashseq[i])
 
         plt.figure("tke_inlet")
-        plt.plot(inlet.t / tau, inlet.tke, lw=2, color=cmap[i], label=f"{model}")
+        p = plt.plot(inlet.t / tau, inlet.tke, lw=2, color=cmap[i], label=f"{model}")
+        p[0].set_dashes(dashseq[i])
 
         plt.figure("sdr_inlet")
-        plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[i], label=f"{model}")
+        p = plt.plot(inlet.t / tau, inlet.sdr, lw=2, color=cmap[i], label=f"{model}")
+        p[0].set_dashes(dashseq[i])
 
         front = pd.read_csv(os.path.join(fdir, "f_front.dat"))
         xmin, xmax = front.x.min(), front.x.max()
@@ -396,7 +413,7 @@ if __name__ == "__main__":
         plt.fill_between(
             x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
         )
-        plt.xlabel(r"$\langle u_x \rangle + x$", fontsize=22, fontweight="bold")
+        plt.xlabel(r"$\langle u \rangle / u_0 + x/h$", fontsize=22, fontweight="bold")
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
         plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
@@ -412,7 +429,7 @@ if __name__ == "__main__":
             x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
         )
         plt.xlabel(
-            f"${vscale}\langle u_y \\rangle + x$", fontsize=22, fontweight="bold"
+            f"${vscale}\langle v \\rangle / u_0 + x/h$", fontsize=22, fontweight="bold"
         )
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
@@ -429,7 +446,9 @@ if __name__ == "__main__":
             x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
         )
         plt.xlabel(
-            f"${vpscale}\langle u'u' \\rangle + x$", fontsize=22, fontweight="bold"
+            f"${vpscale}\langle u'u' \\rangle / u_0^2 + x/h$",
+            fontsize=22,
+            fontweight="bold",
         )
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
@@ -446,7 +465,9 @@ if __name__ == "__main__":
             x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
         )
         plt.xlabel(
-            f"${vpscale}\langle v'v' \\rangle + x$", fontsize=22, fontweight="bold"
+            f"${vpscale}\langle v'v' \\rangle / u_0^2 + x/h$",
+            fontsize=22,
+            fontweight="bold",
         )
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
@@ -463,7 +484,9 @@ if __name__ == "__main__":
             x_hill, np.zeros(x_hill.shape), y_hill, color="darkgray", zorder=0
         )
         plt.xlabel(
-            f"${vpscale}\langle u'v' \\rangle + x$", fontsize=22, fontweight="bold"
+            f"${vpscale}\langle u'v' \\rangle/u_0^2 + x/h$",
+            fontsize=22,
+            fontweight="bold",
         )
         plt.ylabel(r"$y / h$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
@@ -476,7 +499,7 @@ if __name__ == "__main__":
 
         plt.figure("cf")
         ax = plt.gca()
-        plt.xlabel(r"$x$", fontsize=22, fontweight="bold")
+        plt.xlabel(r"$x/h$", fontsize=22, fontweight="bold")
         plt.ylabel(r"$c_f$", fontsize=22, fontweight="bold")
         plt.setp(ax.get_xmajorticklabels(), fontsize=18, fontweight="bold")
         plt.setp(ax.get_ymajorticklabels(), fontsize=18, fontweight="bold")
