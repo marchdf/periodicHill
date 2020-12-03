@@ -179,7 +179,7 @@ if __name__ == "__main__":
             mfc=cmap[-1],
             mec=cmap[-1],
             markersize=3,
-            label="Exp.",
+            label="Exp. (Rapp 2009)",
         ),
     ]
     grouped = edf.groupby(["x"])
@@ -247,7 +247,9 @@ if __name__ == "__main__":
         )
 
     # LES
-    legend_elements += (Line2D([0], [0], lw=2, color=cmap[-2], label="LES"),)
+    legend_elements += (
+        Line2D([0], [0], lw=2, color=cmap[-2], label="LES (Breuer 2009)"),
+    )
     grouped = ldf.groupby(["x"])
     for k, (name, group) in enumerate(grouped):
 
@@ -299,9 +301,7 @@ if __name__ == "__main__":
         yname = os.path.join(os.path.dirname(fdir), "periodicHill.yaml")
         u0, rho0, mu, turb_model = parse_ic(yname)
         model = turb_model.upper().replace("_", "-")
-        legend_elements += [
-            Line2D([0], [0], lw=2, color=cmap[i], label=f"Nalu-{model}")
-        ]
+        legend_elements += [Line2D([0], [0], lw=2, color=cmap[i], label=f"{model}")]
 
         h = 1.0
         tau = h / u0

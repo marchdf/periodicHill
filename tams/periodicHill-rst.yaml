@@ -30,10 +30,10 @@ linear_solvers:
 realms:
 
   - name: realm_1
-    mesh: ../meshes/periodicHill.exo
+    mesh: ./restart/periodicHill.rst
     use_edges: yes
     check_for_missing_bcs: yes
-    automatic_decomposition_type: rcb
+    support_inconsistent_multi_state_restart: yes
 
     equation_systems:
       name: theEqSys
@@ -70,6 +70,11 @@ realms:
           velocity: [1.0,0.0,0.0]
           turbulent_ke: 0.1
           specific_dissipation_rate: 50.0
+          average_velocity: [1.0,0.0,0.0]
+          average_tke_resolved: 0.0
+          average_dudx: 0.0
+          k_ratio: 1.0
+          avg_res_adequacy_parameter: 1.0 
 
     material_properties:
       target_name: interior-hex
@@ -109,7 +114,8 @@ realms:
 
     solution_options:
       name: myOptions
-      turbulence_model: sst
+      turbulence_model: sst_ams
+      reset_AMS_averages_on_init: false
       projected_timescale_type: momentum_diag_inv
 
       fix_pressure_at_node:
@@ -153,6 +159,11 @@ realms:
 
         - turbulence_model_constants:
             SDRWallFactor: 0.625
+            periodicForcingLengthX: 4.5
+            periodicForcingLengthY: 1.0
+            periodicForcingLengthZ: 2.25
+            forcingCl: 8.0
+            forcingFactor: 8.0
 
         - source_terms:
             momentum: body_force_box
@@ -166,27 +177,29 @@ realms:
             density_reference: 1.0
             velocity_target_name: inlet
             drag_target_name: [top, wall]
-            output_file_name: forcing.dat
+            output_file_name: forcing-r02.dat
 
     post_processing:
 
     - type: surface
       physics: surface_force_and_moment
-      output_file_name: periodicHill.dat
+      output_file_name: periodicHill-r02.dat
       frequency: 1
       parameters: [0,0]
       target_name: [top, wall]
 
     restart:
-      restart_data_base_name: restart/periodicHill.rst
-      restart_frequency: 500
+      restart_data_base_name: restart-r02/periodicHill.rst
+      restart_frequency: 1000
+      restart_time: 10000
 
     output:
-      output_data_base_name: results/periodicHill.e
-      output_frequency: 100
+      output_data_base_name: results-r02/periodicHill.e
+      output_frequency: 500
       output_node_set: no
       output_variables:
        - velocity
+       - average_velocity
        - density
        - pressure
        - pressure_force
@@ -198,13 +211,23 @@ realms:
        - minimum_distance_to_wall
        - sst_f_one_blending
        - turbulent_viscosity
+       - k_ratio
+       - average_time
+       - average_mass_flow_rate
+       - average_tke_resolved
+       - avg_res_adequacy_parameter
+       - resolution_adequacy_parameter
+       - metric_tensor
+       - element_courant
+       - average_production
+       - average_dudx
 
 Time_Integrators:
   - StandardTimeIntegrator:
       name: ti_1
       start_time: 0
-      time_step: 4.0e-2
-      termination_step_count: 100000
+      time_step: 4.0e-3
+      termination_step_count: 1000000
       time_stepping_type: fixed
       time_step_count: 0
       second_order_accuracy: yes

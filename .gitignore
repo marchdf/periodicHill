@@ -4,5 +4,6 @@ naluX
 *.o*
 __pycache__
 *.pdf
-restart
-results
+restart*/
+results*/
+*.dat
