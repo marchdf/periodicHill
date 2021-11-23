@@ -162,6 +162,7 @@ realms:
             momentum_box: [-1.0, -1.00001, 0.0, 10.0, 4.0, 5.0]
 
         - dynamic_body_force_box_parameters:
+            forcing_direction: 0
             velocity_reference: 1.0
             density_reference: 1.0
             velocity_target_name: inlet
