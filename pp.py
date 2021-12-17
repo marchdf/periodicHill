@@ -159,29 +159,58 @@ if __name__ == "__main__":
         twname = os.path.join(fdir, "tw.dat")
         tw.to_csv(twname, index=False)
 
-    # Extract (average) velocity data
-    vel_data = None
+    # Extract average data
+    field_names = ["u", "v", "w", "tke", "sdr", "tau_xx", "tau_xy", "tau_yy"]
+    fld_data = None
     for tstep in tavg:
         ftime, missing = mesh.stkio.read_defined_input_fields(tstep)
         printer(f"Loading {args.vel_name} fields for time: {ftime}")
 
         interior = mesh.meta.get_part("interior-hex")
         sel = interior & mesh.meta.locally_owned_part
-        velocity = mesh.meta.get_field(args.vel_name)
-        names = ["x", "y", "z", "u", "v", "w"]
+        coords = mesh.meta.coordinate_field
+        fields = [
+            mesh.meta.get_field(args.vel_name),
+            mesh.meta.get_field("turbulent_ke"),
+            mesh.meta.get_field("specific_dissipation_rate"),
+        ]
+        average_dudx = mesh.meta.get_field("average_dudx")
+        tvisc = mesh.meta.get_field("turbulent_viscosity")
+        density = mesh.meta.get_field("density")
+        k_ratio = mesh.meta.get_field("k_ratio")
+        names = ["x", "y", "z"] + field_names
         nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
 
         cnt = 0
         data = np.zeros((nnodes, len(names)))
+
         for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK):
-            xyz = coords.bkt_view(bkt)
-            vel = velocity.bkt_view(bkt)
-            data[cnt : cnt + bkt.size, :] = np.hstack((xyz, vel))
+            arr = coords.bkt_view(bkt)
+            for fld in fields:
+                vals = fld.bkt_view(bkt)
+                if len(vals.shape) == 1:  # its a scalar
+                    vals = vals.reshape(-1, 1)
+                arr = np.hstack((arr, vals))
+
+            # tau_sgs = 2*alpha*nu_t*<S_ij>
+            avgdudx = average_dudx.bkt_view(bkt)
+            nut = tvisc.bkt_view(bkt)
+            rho = density.bkt_view(bkt)
+            alpha = k_ratio.bkt_view(bkt) ** 1.7
+            coeffSGRS = alpha * (2.0 - alpha) * nut / rho
+            # tauSGRS_ij = coeffSGRS *(avgdudx[:, i * 3 + j] + avgdudx[:, j * 3 + i])
+            tausgrs_xx = (coeffSGRS * (avgdudx[:, 0] + avgdudx[:, 0])).reshape(-1, 1)
+            tausgrs_xy = (coeffSGRS * (avgdudx[:, 1] + avgdudx[:, 3])).reshape(-1, 1)
+            tausgrs_yy = (coeffSGRS * (avgdudx[:, 4] + avgdudx[:, 4])).reshape(-1, 1)
+            arr = np.hstack((arr, tausgrs_xx))
+            arr = np.hstack((arr, tausgrs_xy))
+            arr = np.hstack((arr, tausgrs_yy))
+            data[cnt : cnt + bkt.size, :] = arr
             cnt += bkt.size
 
-        if vel_data is None:
-            vel_data = np.zeros(data.shape)
-        vel_data += data / len(tavg)
+        if fld_data is None:
+            fld_data = np.zeros(data.shape)
+        fld_data += data / len(tavg)
 
     # Subset the velocities on planes
     ninterp = 200
@@ -190,7 +219,7 @@ if __name__ == "__main__":
     for x in utilities.xplanes():
 
         # subset the data around the plane of interest
-        sub = vel_data[(x - dx <= vel_data[:, 0]) & (vel_data[:, 0] <= x + dx), :]
+        sub = fld_data[(x - dx <= fld_data[:, 0]) & (fld_data[:, 0] <= x + dx), :]
 
         lst = comm.gather(sub, root=0)
         comm.Barrier()
@@ -205,39 +234,19 @@ if __name__ == "__main__":
             ymin, ymax = utilities.hill(xi)[0], df.y.max()
             yi = np.linspace(ymin, ymax, ninterp)
 
-            umean = griddata(
-                (df.x, df.y),
-                df.u,
-                (xi[None, :], yi[:, None]),
-                method="cubic",
-                fill_value=0,
-            ).flatten()
-            vmean = griddata(
-                (df.x, df.y),
-                df.v,
-                (xi[None, :], yi[:, None]),
-                method="cubic",
-                fill_value=0,
-            ).flatten()
-            wmean = griddata(
-                (df.x, df.y),
-                df.w,
-                (xi[None, :], yi[:, None]),
-                method="cubic",
-                fill_value=0,
-            ).flatten()
+            means = {}
+            for fld in field_names:
+                means[fld] = griddata(
+                    (df.x, df.y),
+                    df[fld],
+                    (xi[None, :], yi[:, None]),
+                    method="cubic",
+                    fill_value=0,
+                ).flatten()
+            means["x"] = x * np.ones(yi.shape)
+            means["y"] = yi
 
-            planes.append(
-                pd.DataFrame(
-                    {
-                        "x": x * np.ones(yi.shape),
-                        "y": yi,
-                        "u": umean,
-                        "v": vmean,
-                        "w": wmean,
-                    }
-                )
-            )
+            planes.append(pd.DataFrame(means))
 
     # Extract fluctuating velocities
     if rank == 0:

@@ -333,7 +333,7 @@ if __name__ == "__main__":
                 continue
             plt.figure("upup")
             p = plt.plot(
-                vpscale * group[idx].upup + group[idx].x,
+                vpscale * (group[idx].upup + group[idx].tau_xx) + group[idx].x,
                 group[idx].y,
                 lw=2,
                 color=cmap[i],
@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
             plt.figure("vpvp")
             p = plt.plot(
-                vpscale * group[idx].vpvp + group[idx].x,
+                vpscale * (group[idx].vpvp + group[idx].tau_yy) + group[idx].x,
                 group[idx].y,
                 lw=2,
                 color=cmap[i],
@@ -351,7 +351,7 @@ if __name__ == "__main__":
 
             plt.figure("upvp")
             p = plt.plot(
-                vpscale * group[idx].upvp + group[idx].x,
+                vpscale * (group[idx].upvp+ group[idx].tau_xy) + group[idx].x,
                 group[idx].y,
                 lw=2,
                 color=cmap[i],
