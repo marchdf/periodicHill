@@ -155,6 +155,8 @@ realms:
             SDRWallFactor: 0.625
             sigmaKOne: 0.5
             sigmaWOne: 0.5
+            sstLRProd: 0.0
+            gammaOne: 0.5291005
 
         - source_terms:
             momentum: body_force_box
@@ -201,6 +203,7 @@ realms:
        - minimum_distance_to_wall
        - sst_f_one_blending
        - turbulent_viscosity
+       - dudx
 
 Time_Integrators:
   - StandardTimeIntegrator:

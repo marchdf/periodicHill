@@ -30,7 +30,7 @@ linear_solvers:
 realms:
 
   - name: realm_1
-    mesh: ./restart/periodicHill.rst
+    mesh: /projects/hfm/mhenryde/periodicHill/sstlr-ams/restart/periodicHill.rst
     use_edges: yes
     check_for_missing_bcs: yes
     support_inconsistent_multi_state_restart: yes
@@ -70,6 +70,11 @@ realms:
           velocity: [1.0,0.0,0.0]
           turbulent_ke: 0.1
           specific_dissipation_rate: 50.0
+          average_velocity: [1.0,0.0,0.0]
+          average_tke_resolved: 0.0
+          average_dudx: 0.0
+          k_ratio: 1.0
+          avg_res_adequacy_parameter: 1.0 
 
     material_properties:
       target_name: interior-hex
@@ -109,7 +114,8 @@ realms:
 
     solution_options:
       name: myOptions
-      turbulence_model: sst_des
+      turbulence_model: sstlr_ams
+      reset_AMS_averages_on_init: false
       projected_timescale_type: momentum_diag_inv
 
       fix_pressure_at_node:
@@ -152,7 +158,17 @@ realms:
             specific_dissipation_rate: 0.7
 
         - turbulence_model_constants:
+            periodicForcingLengthX: 4.5
+            periodicForcingLengthY: 1.0
+            periodicForcingLengthZ: 2.25
             SDRWallFactor: 0.625
+            sigmaKOne: 0.5
+            sigmaWOne: 0.5
+            forcingFactor: 32.0
+            CMdeg: 0.11
+            alphaPow: 1.7
+            sstLRProd: 0.0
+            gammaOne: 0.5291005
 
         - source_terms:
             momentum: body_force_box
@@ -189,6 +205,7 @@ realms:
       output_node_set: no
       output_variables:
        - velocity
+       - average_velocity
        - density
        - pressure
        - pressure_force
@@ -200,8 +217,16 @@ realms:
        - minimum_distance_to_wall
        - sst_f_one_blending
        - turbulent_viscosity
-       - dudx
+       - k_ratio
+       - average_time
+       - average_mass_flow_rate
+       - average_tke_resolved
+       - avg_res_adequacy_parameter
+       - resolution_adequacy_parameter
+       - metric_tensor
        - element_courant
+       - average_production
+       - average_dudx
 
 Time_Integrators:
   - StandardTimeIntegrator:

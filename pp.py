@@ -68,13 +68,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--auto_decomp", help="Auto-decomposition", action="store_true")
     parser.add_argument(
-        "-v",
-        "--vel_name",
-        help="Name of the velocity field",
-        default="velocity",
-        type=str,
-    )
-    parser.add_argument(
         "--navg", help="Number of times to average", default=10, type=int
     )
     parser.add_argument(
@@ -160,21 +153,28 @@ if __name__ == "__main__":
         tw.to_csv(twname, index=False)
 
     # Extract average data
+    fld = mesh.meta.get_field("average_velocity")
+    is_ams = not fld.is_null
+    pfx_vel = "average_" if is_ams else ""
+    vel_name = pfx_vel + "velocity"
+    dudx_name = pfx_vel + "dudx"
     field_names = ["u", "v", "w", "tke", "sdr", "tau_xx", "tau_xy", "tau_yy"]
     fld_data = None
     for tstep in tavg:
         ftime, missing = mesh.stkio.read_defined_input_fields(tstep)
-        printer(f"Loading {args.vel_name} fields for time: {ftime}")
+        printer(f"""Loading {vel_name} fields for time: {ftime}""")
 
         interior = mesh.meta.get_part("interior-hex")
         sel = interior & mesh.meta.locally_owned_part
         coords = mesh.meta.coordinate_field
+        turbulent_ke = mesh.meta.get_field("turbulent_ke")
+        specific_dissipation_rate = mesh.meta.get_field("specific_dissipation_rate")
         fields = [
-            mesh.meta.get_field(args.vel_name),
-            mesh.meta.get_field("turbulent_ke"),
-            mesh.meta.get_field("specific_dissipation_rate"),
+            mesh.meta.get_field(vel_name),
+            turbulent_ke,
+            specific_dissipation_rate,
         ]
-        average_dudx = mesh.meta.get_field("average_dudx")
+        dveldx = mesh.meta.get_field(dudx_name)
         tvisc = mesh.meta.get_field("turbulent_viscosity")
         density = mesh.meta.get_field("density")
         k_ratio = mesh.meta.get_field("k_ratio")
@@ -192,16 +192,22 @@ if __name__ == "__main__":
                     vals = vals.reshape(-1, 1)
                 arr = np.hstack((arr, vals))
 
-            # tau_sgs = 2*alpha*nu_t*<S_ij>
-            avgdudx = average_dudx.bkt_view(bkt)
+            # tauSGRS_ij = coeffSGRS *(avgdudx[:, i * 3 + j] + avgdudx[:, j * 3 + i]) + 2/3 rho k delta_ij
+            dudx = dveldx.bkt_view(bkt)
             nut = tvisc.bkt_view(bkt)
             rho = density.bkt_view(bkt)
-            alpha = k_ratio.bkt_view(bkt) ** 1.7
+            tke = turbulent_ke.bkt_view(bkt)
+            if is_ams:
+                alpha = k_ratio.bkt_view(bkt) ** 1.7
+                krat = k_ratio.bkt_view(bkt)
+            else:
+                alpha = 1
+                krat = 1
             coeffSGRS = alpha * (2.0 - alpha) * nut / rho
-            # tauSGRS_ij = coeffSGRS *(avgdudx[:, i * 3 + j] + avgdudx[:, j * 3 + i])
-            tausgrs_xx = (coeffSGRS * (avgdudx[:, 0] + avgdudx[:, 0])).reshape(-1, 1)
-            tausgrs_xy = (coeffSGRS * (avgdudx[:, 1] + avgdudx[:, 3])).reshape(-1, 1)
-            tausgrs_yy = (coeffSGRS * (avgdudx[:, 4] + avgdudx[:, 4])).reshape(-1, 1)
+            diag_tke = (-2.0 / 3.0 * rho * tke * krat).reshape(-1,1)
+            tausgrs_xx = (coeffSGRS * (dudx[:, 0] + dudx[:, 0])).reshape(-1, 1) + diag_tke
+            tausgrs_xy = (coeffSGRS * (dudx[:, 1] + dudx[:, 3])).reshape(-1, 1)
+            tausgrs_yy = (coeffSGRS * (dudx[:, 4] + dudx[:, 4])).reshape(-1, 1) + diag_tke
             arr = np.hstack((arr, tausgrs_xx))
             arr = np.hstack((arr, tausgrs_xy))
             arr = np.hstack((arr, tausgrs_yy))
@@ -257,11 +263,11 @@ if __name__ == "__main__":
 
     for tstep in tavg_instantaneous:
         ftime, missing = mesh.stkio.read_defined_input_fields(tstep)
-        printer(f"Loading {args.vel_name} fields for time: {ftime}")
+        printer(f"Loading velocity fields for time: {ftime}")
 
         interior = mesh.meta.get_part("interior-hex")
         sel = interior & mesh.meta.locally_owned_part
-        velocity = mesh.meta.get_field(args.vel_name)
+        velocity = mesh.meta.get_field("velocity")
         names = ["x", "y", "z", "u", "v", "w"]
         nnodes = sum(bkt.size for bkt in mesh.iter_buckets(sel, stk.StkRank.NODE_RANK))
 

@@ -199,6 +199,7 @@ realms:
        - minimum_distance_to_wall
        - sst_f_one_blending
        - turbulent_viscosity
+       - dudx
 
 Time_Integrators:
   - StandardTimeIntegrator:

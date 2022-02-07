@@ -329,34 +329,33 @@ if __name__ == "__main__":
             )
             p[0].set_dashes(dashseq[i])
 
-            if model == "SST":
-                continue
-            plt.figure("upup")
-            p = plt.plot(
-                vpscale * (group[idx].upup + group[idx].tau_xx) + group[idx].x,
-                group[idx].y,
-                lw=2,
-                color=cmap[i],
-            )
-            p[0].set_dashes(dashseq[i])
+            if "tau_xx" in group[idx]:
+                plt.figure("upup")
+                p = plt.plot(
+                    vpscale * (group[idx].upup - group[idx].tau_xx) + group[idx].x,
+                    group[idx].y,
+                    lw=2,
+                    color=cmap[i],
+                )
+                p[0].set_dashes(dashseq[i])
 
-            plt.figure("vpvp")
-            p = plt.plot(
-                vpscale * (group[idx].vpvp + group[idx].tau_yy) + group[idx].x,
-                group[idx].y,
-                lw=2,
-                color=cmap[i],
-            )
-            p[0].set_dashes(dashseq[i])
+                plt.figure("vpvp")
+                p = plt.plot(
+                    vpscale * (group[idx].vpvp - group[idx].tau_yy) + group[idx].x,
+                    group[idx].y,
+                    lw=2,
+                    color=cmap[i],
+                )
+                p[0].set_dashes(dashseq[i])
 
-            plt.figure("upvp")
-            p = plt.plot(
-                vpscale * (group[idx].upvp+ group[idx].tau_xy) + group[idx].x,
-                group[idx].y,
-                lw=2,
-                color=cmap[i],
-            )
-            p[0].set_dashes(dashseq[i])
+                plt.figure("upvp")
+                p = plt.plot(
+                    vpscale * (group[idx].upvp - group[idx].tau_xy) + group[idx].x,
+                    group[idx].y,
+                    lw=2,
+                    color=cmap[i],
+                )
+                p[0].set_dashes(dashseq[i])
 
         cf = pd.read_csv(os.path.join(fdir, "tw.dat"))
         cf["cf"] = cf.tauwx / dynPres

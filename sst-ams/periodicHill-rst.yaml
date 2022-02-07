@@ -30,7 +30,7 @@ linear_solvers:
 realms:
 
   - name: realm_1
-    mesh: ../sst-update-all-force/restart/periodicHill.rst
+    mesh: ./restart/periodicHill.rst
     use_edges: yes
     check_for_missing_bcs: yes
     support_inconsistent_multi_state_restart: yes
@@ -115,6 +115,7 @@ realms:
     solution_options:
       name: myOptions
       turbulence_model: sst_ams
+      reset_AMS_averages_on_init: false
       projected_timescale_type: momentum_diag_inv
 
       fix_pressure_at_node:
@@ -157,12 +158,10 @@ realms:
             specific_dissipation_rate: 0.7
 
         - turbulence_model_constants:
-            SDRWallFactor: 0.625
             periodicForcingLengthX: 4.5
             periodicForcingLengthY: 1.0
             periodicForcingLengthZ: 2.25
-            forcingCl: 8.0
-            forcingFactor: 8.0
+            SDRWallFactor: 0.625
 
         - source_terms:
             momentum: body_force_box
@@ -177,24 +176,24 @@ realms:
             density_reference: 1.0
             velocity_target_name: inlet
             drag_target_name: [top, wall]
-            output_file_name: forcing.dat
+            output_file_name: forcing-r00.dat
 
     post_processing:
 
     - type: surface
       physics: surface_force_and_moment
-      output_file_name: periodicHill.dat
+      output_file_name: periodicHill-r00.dat
       frequency: 1
       parameters: [0,0]
       target_name: [top, wall]
 
     restart:
-      restart_data_base_name: restart/periodicHill.rst
+      restart_data_base_name: restart/periodicHill-r00.rst
       restart_frequency: 1000
       restart_time: 10000
 
     output:
-      output_data_base_name: results/periodicHill.e
+      output_data_base_name: results/periodicHill-r00.e
       output_frequency: 500
       output_node_set: no
       output_variables:
